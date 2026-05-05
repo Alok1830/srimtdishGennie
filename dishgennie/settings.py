@@ -222,8 +222,8 @@ EMAIL_BACKEND = os.environ.get(
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = env_int("EMAIL_PORT", 587)
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", default=True)
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "dishgennie.web@gmail.com")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "hhzekzloueytotig")
 DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL",
     EMAIL_HOST_USER or "DishGennie <noreply@dishgennie.com>",
@@ -232,9 +232,6 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 # Fall back to console backend if no SMTP credentials are set
 if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
-print(f"DEBUG: EMAIL_BACKEND = {EMAIL_BACKEND}")
-print(f"DEBUG: EMAIL_HOST_USER = {EMAIL_HOST_USER}")
 
 # Session and proxy settings
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
