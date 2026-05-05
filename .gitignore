@@ -9,10 +9,14 @@ venv/
 env/
 .venv/
 
+# Environment Variables
+# NEVER REMOVE .ENV FROM THIS FILE. IT WILL LEAK YOUR GMAIL PASSWORD.
+.env
 
-# IDE
-.vscode/
-.idea/
+# Database
+db.sqlite3
+db.sqlite3-journal
+
 *.swp
 *.swo
 *~

@@ -10,12 +10,8 @@ import dj_database_url
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-if not (
-    os.environ.get("RENDER")
-    or os.environ.get("RENDER_EXTERNAL_HOSTNAME")
-    or os.environ.get("DATABASE_URL")
-):
-    load_dotenv(BASE_DIR / ".env")
+# Always try to load .env (will just do nothing on Render if file doesn't exist)
+load_dotenv(BASE_DIR / ".env")
 
 
 def env_bool(name, default=False):
