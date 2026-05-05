@@ -42,108 +42,116 @@ def _generate_jwt_context(user):
 @never_cache
 def login_page(request):
     """Login page — GET shows form, POST authenticates."""
-    if request.user.is_authenticated:
-        return _redirect_by_role(request.user)
+    try:
+        if request.user.is_authenticated:
+            return _redirect_by_role(request.user)
 
-    if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '')
-        remember = request.POST.get('remember_me')
+        if request.method == 'POST':
+            username = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '')
+            remember = request.POST.get('remember_me')
 
-        if not username or not password:
-            messages.error(request, 'Please enter both username and password.')
-            return render(request, 'accounts/login.html')
-
-        user = authenticate(request, username=username, password=password)
-
-        if user is not None:
-            if not user.is_active:
-                messages.error(request, 'Your account has been disabled. Contact support.')
+            if not username or not password:
+                messages.error(request, 'Please enter both username and password.')
                 return render(request, 'accounts/login.html')
 
-            login(request, user)
+            user = authenticate(request, username=username, password=password)
 
-            # Handle "Remember Me"
-            if not remember:
-                request.session.set_expiry(0)  # Session expires on browser close
+            if user is not None:
+                if not user.is_active:
+                    messages.error(request, 'Your account has been disabled. Contact support.')
+                    return render(request, 'accounts/login.html')
+
+                login(request, user)
+
+                # Handle "Remember Me"
+                if not remember:
+                    request.session.set_expiry(0)  # Session expires on browser close
+                else:
+                    request.session.set_expiry(60 * 60 * 24 * 30)  # 30 days
+
+                messages.success(request, f'Welcome back, {user.first_name or user.username}!')
+                return _redirect_by_role(user)
             else:
-                request.session.set_expiry(60 * 60 * 24 * 30)  # 30 days
-
-            messages.success(request, f'Welcome back, {user.first_name or user.username}!')
-            return _redirect_by_role(user)
-        else:
-            # Check if this is a rejected/deactivated maid trying to log in
-            try:
-                inactive_user = CustomUser.objects.get(username=username, is_active=False)
-                if inactive_user.is_maid_user and hasattr(inactive_user, 'maid_profile'):
-                    if inactive_user.maid_profile.verification_status == 'rejected':
-                        messages.error(request, 'Your maid verification was rejected. Please re-register with updated details or contact support.')
+                # Check if this is a rejected/deactivated maid trying to log in
+                try:
+                    inactive_user = CustomUser.objects.get(username=username, is_active=False)
+                    if inactive_user.is_maid_user and hasattr(inactive_user, 'maid_profile'):
+                        if inactive_user.maid_profile.verification_status == 'rejected':
+                            messages.error(request, 'Your maid verification was rejected. Please re-register with updated details or contact support.')
+                        else:
+                            messages.error(request, 'Your account has been deactivated. Contact support.')
                     else:
                         messages.error(request, 'Your account has been deactivated. Contact support.')
-                else:
-                    messages.error(request, 'Your account has been deactivated. Contact support.')
-            except CustomUser.DoesNotExist:
-                messages.error(request, 'Invalid username or password. Please try again.')
+                except CustomUser.DoesNotExist:
+                    messages.error(request, 'Invalid username or password. Please try again.')
 
-    return render(request, 'accounts/login.html')
+        return render(request, 'accounts/login.html')
+    except Exception:
+        messages.error(request, 'An unexpected error occurred. Please try again later.')
+        return render(request, 'accounts/login.html')
 
 
 @never_cache
 def signup_page(request):
     """Customer signup — GET shows form, POST validates and sends OTP."""
-    if request.user.is_authenticated:
-        return _redirect_by_role(request.user)
+    try:
+        if request.user.is_authenticated:
+            return _redirect_by_role(request.user)
 
-    if request.method == 'POST':
-        first_name = request.POST.get('first_name', '').strip()
-        last_name = request.POST.get('last_name', '').strip()
-        username = request.POST.get('username', '').strip()
-        email = request.POST.get('email', '').strip()
-        phone = request.POST.get('phone', '').strip()
-        password = request.POST.get('password', '')
-        password_confirm = request.POST.get('password_confirm', '')
-        referral_code_input = request.POST.get('referral_code', '').strip()
+        if request.method == 'POST':
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            username = request.POST.get('username', '').strip()
+            email = request.POST.get('email', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            password = request.POST.get('password', '')
+            password_confirm = request.POST.get('password_confirm', '')
+            referral_code_input = request.POST.get('referral_code', '').strip()
 
-        # Validation
-        errors = []
-        if not username:
-            errors.append('Username is required.')
-        if not email:
-            errors.append('Email is required for OTP verification.')
-        if not password or len(password) < 8:
-            errors.append('Password must be at least 8 characters.')
-        if password != password_confirm:
-            errors.append('Passwords do not match.')
-        if CustomUser.objects.filter(username=username).exists():
-            errors.append('This username is already taken.')
-        if email and CustomUser.objects.filter(email=email).exists():
-            errors.append('This email is already registered.')
+            # Validation
+            errors = []
+            if not username:
+                errors.append('Username is required.')
+            if not email:
+                errors.append('Email is required for OTP verification.')
+            if not password or len(password) < 8:
+                errors.append('Password must be at least 8 characters.')
+            if password != password_confirm:
+                errors.append('Passwords do not match.')
+            if CustomUser.objects.filter(username=username).exists():
+                errors.append('This username is already taken.')
+            if email and CustomUser.objects.filter(email=email).exists():
+                errors.append('This email is already registered.')
 
-        if errors:
-            for err in errors:
-                messages.error(request, err)
-            return render(request, 'accounts/signup.html', {
-                'form_data': request.POST
-            })
+            if errors:
+                for err in errors:
+                    messages.error(request, err)
+                return render(request, 'accounts/signup.html', {
+                    'form_data': request.POST
+                })
 
-        # Store registration data in session and send OTP
-        otp = str(random.randint(100000, 999999))
-        request.session['pending_registration'] = {
-            'type': 'customer',
-            'first_name': first_name,
-            'last_name': last_name,
-            'username': username,
-            'email': email,
-            'phone': phone,
-            'password': password,
-            'referral_code': referral_code_input,
-            'otp': otp,
-        }
-        _send_otp_email(email, otp, first_name or username)
-        messages.info(request, f'A verification code has been sent to {email}')
-        return redirect('verify-otp')
+            # Store registration data in session and send OTP
+            otp = str(random.randint(100000, 999999))
+            request.session['pending_registration'] = {
+                'type': 'customer',
+                'first_name': first_name,
+                'last_name': last_name,
+                'username': username,
+                'email': email,
+                'phone': phone,
+                'password': password,
+                'referral_code': referral_code_input,
+                'otp': otp,
+            }
+            _send_otp_email(email, otp, first_name or username)
+            messages.info(request, f'A verification code has been sent to {email}')
+            return redirect('verify-otp')
 
-    return render(request, 'accounts/signup.html')
+        return render(request, 'accounts/signup.html')
+    except Exception:
+        messages.error(request, 'An unexpected error occurred. Please try again later.')
+        return render(request, 'accounts/signup.html')
 
 
 @never_cache
@@ -205,7 +213,11 @@ def maid_register_page(request):
             'bio': bio,
             'otp': otp,
         }
-        _send_otp_email(email, otp, first_name or username)
+        try:
+            _send_otp_email(email, otp, first_name or username)
+        except Exception:
+            pass  # fail_silently=True is already set, but this is extra precaution
+        
         messages.info(request, f'A verification code has been sent to {email}')
         return redirect('verify-otp')
 
@@ -298,7 +310,8 @@ def verify_otp_page(request):
                     is_verified=True,
                 )
                 del request.session['pending_registration']
-                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                user.backend = 'django.contrib.auth.backends.ModelBackend'
+                login(request, user)
                 messages.success(request, f'Welcome to DishGennie, {pending["first_name"] or pending["username"]}! 🎉')
                 return redirect('user-dashboard')
 
@@ -330,7 +343,8 @@ def verify_otp_page(request):
                     bio=pending.get('bio', ''),
                 )
                 del request.session['pending_registration']
-                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                user.backend = 'django.contrib.auth.backends.ModelBackend'
+                login(request, user)
                 messages.success(request, 'Registration successful! Your profile is pending admin verification.')
                 return redirect('maid-dashboard')
         except Exception as e:
