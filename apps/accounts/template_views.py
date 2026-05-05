@@ -114,9 +114,9 @@ def signup_page(request):
             errors.append('Password must be at least 8 characters.')
         if password != password_confirm:
             errors.append('Passwords do not match.')
-        if CustomUser.objects.filter(username=username, is_active=True).exists():
+        if CustomUser.objects.filter(username=username).exists():
             errors.append('This username is already taken.')
-        if email and CustomUser.objects.filter(email=email, is_active=True).exists():
+        if email and CustomUser.objects.filter(email=email).exists():
             errors.append('This email is already registered.')
 
         if errors:
@@ -177,9 +177,9 @@ def maid_register_page(request):
             errors.append('Password must be at least 8 characters.')
         if password != password_confirm:
             errors.append('Passwords do not match.')
-        if CustomUser.objects.filter(username=username, is_active=True).exists():
+        if CustomUser.objects.filter(username=username).exists():
             errors.append('This username is already taken.')
-        if email and CustomUser.objects.filter(email=email, is_active=True).exists():
+        if email and CustomUser.objects.filter(email=email).exists():
             errors.append('This email is already registered.')
 
         if errors:
@@ -277,61 +277,65 @@ def verify_otp_page(request):
             })
 
         # OTP is valid — create the account
-        if pending['type'] == 'customer':
-            referred_by = None
-            if pending.get('referral_code'):
+        try:
+            if pending['type'] == 'customer':
+                referred_by = None
+                if pending.get('referral_code'):
+                    try:
+                        referred_by = CustomUser.objects.get(referral_code=pending['referral_code'])
+                    except CustomUser.DoesNotExist:
+                        pass
+
+                user = CustomUser.objects.create_user(
+                    username=pending['username'],
+                    email=pending['email'],
+                    first_name=pending['first_name'],
+                    last_name=pending['last_name'],
+                    phone=pending.get('phone', ''),
+                    password=pending['password'],
+                    role=CustomUser.Role.CUSTOMER,
+                    referred_by=referred_by,
+                    is_verified=True,
+                )
+                del request.session['pending_registration']
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                messages.success(request, f'Welcome to DishGennie, {pending["first_name"] or pending["username"]}! 🎉')
+                return redirect('user-dashboard')
+
+            elif pending['type'] == 'maid':
+                user = CustomUser.objects.create_user(
+                    username=pending['username'],
+                    email=pending['email'],
+                    first_name=pending['first_name'],
+                    last_name=pending['last_name'],
+                    phone=pending.get('phone', ''),
+                    password=pending['password'],
+                    role=CustomUser.Role.MAID,
+                    is_verified=True,
+                )
                 try:
-                    referred_by = CustomUser.objects.get(referral_code=pending['referral_code'])
-                except CustomUser.DoesNotExist:
-                    pass
+                    exp = int(pending.get('experience_years', 0))
+                except (ValueError, TypeError):
+                    exp = 0
+                try:
+                    rate = float(pending.get('hourly_rate', 200))
+                except (ValueError, TypeError):
+                    rate = 200.00
 
-            user = CustomUser.objects.create_user(
-                username=pending['username'],
-                email=pending['email'],
-                first_name=pending['first_name'],
-                last_name=pending['last_name'],
-                phone=pending.get('phone', ''),
-                password=pending['password'],
-                role=CustomUser.Role.CUSTOMER,
-                referred_by=referred_by,
-                is_verified=True,
-            )
-            del request.session['pending_registration']
-            login(request, user)
-            messages.success(request, f'Welcome to DishGennie, {pending["first_name"] or pending["username"]}! 🎉')
-            return redirect('user-dashboard')
-
-        elif pending['type'] == 'maid':
-            user = CustomUser.objects.create_user(
-                username=pending['username'],
-                email=pending['email'],
-                first_name=pending['first_name'],
-                last_name=pending['last_name'],
-                phone=pending.get('phone', ''),
-                password=pending['password'],
-                role=CustomUser.Role.MAID,
-                is_verified=True,
-            )
-            try:
-                exp = int(pending.get('experience_years', 0))
-            except (ValueError, TypeError):
-                exp = 0
-            try:
-                rate = float(pending.get('hourly_rate', 200))
-            except (ValueError, TypeError):
-                rate = 200.00
-
-            MaidProfile.objects.create(
-                user=user,
-                aadhaar_number=pending.get('aadhaar_number', ''),
-                experience_years=exp,
-                hourly_rate=rate,
-                bio=pending.get('bio', ''),
-            )
-            del request.session['pending_registration']
-            login(request, user)
-            messages.success(request, 'Registration successful! Your profile is pending admin verification.')
-            return redirect('maid-dashboard')
+                MaidProfile.objects.create(
+                    user=user,
+                    aadhaar_number=pending.get('aadhaar_number', ''),
+                    experience_years=exp,
+                    hourly_rate=rate,
+                    bio=pending.get('bio', ''),
+                )
+                del request.session['pending_registration']
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                messages.success(request, 'Registration successful! Your profile is pending admin verification.')
+                return redirect('maid-dashboard')
+        except Exception as e:
+            messages.error(request, f'An error occurred during account creation: {str(e)}')
+            return redirect('signup')
 
     return render(request, 'accounts/verify_otp.html', {
         'email': pending['email'],
