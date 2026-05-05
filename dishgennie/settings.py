@@ -244,6 +244,9 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+print(f"DEBUG: EMAIL_BACKEND = {EMAIL_BACKEND}")
+print(f"DEBUG: EMAIL_HOST_USER = {EMAIL_HOST_USER}")
+
 # Session and proxy settings
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
 SESSION_SAVE_EVERY_REQUEST = True
