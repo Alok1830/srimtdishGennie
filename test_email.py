@@ -25,9 +25,9 @@ print(f"User: {settings.EMAIL_HOST_USER}")
 try:
     send_mail(
         "Test Email from Django",
-        "If you receive this, SMTP is working.",
+        "If you receive this, SMTP is working and emails are reaching your inbox.",
         settings.DEFAULT_FROM_EMAIL,
-        [settings.EMAIL_HOST_USER], # send to self
+        ["alokvikram169@gmail.com"], # send to real user
         fail_silently=False,
     )
     print("SUCCESS: Email sent successfully!")
