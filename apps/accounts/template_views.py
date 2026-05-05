@@ -240,7 +240,7 @@ def _send_otp_email(email, otp, name):
     )
     send_mail(
         subject, message, settings.DEFAULT_FROM_EMAIL, [email],
-        html_message=html_message, fail_silently=True,
+        html_message=html_message, fail_silently=False,
     )
 
 
