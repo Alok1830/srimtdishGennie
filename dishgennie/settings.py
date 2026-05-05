@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 # Always try to load .env (will just do nothing on Render if file doesn't exist)
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
 
 
 def env_bool(name, default=False):
@@ -46,18 +46,14 @@ ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
 RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-# Allow any *.vercel.app subdomain (covers preview + production deploys)
-if ".vercel.app" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(".vercel.app")
+
 
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 if RENDER_EXTERNAL_HOSTNAME:
     render_origin = f"https://{RENDER_EXTERNAL_HOSTNAME}"
     if render_origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(render_origin)
-# Trust all Vercel subdomains for CSRF
-if "https://*.vercel.app" not in CSRF_TRUSTED_ORIGINS:
-    CSRF_TRUSTED_ORIGINS.append("https://*.vercel.app")
+
 
 # Application definition
 INSTALLED_APPS = [
@@ -202,10 +198,7 @@ CORS_ALLOWED_ORIGINS = env_list(
         "http://127.0.0.1:8000",
     ],
 )
-# Allow any *.vercel.app subdomain via regex
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https://.*\.vercel\.app$",
-]
+
 CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", default=False)
 CORS_ALLOW_CREDENTIALS = True
 
